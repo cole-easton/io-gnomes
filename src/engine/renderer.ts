@@ -7,7 +7,7 @@ export function createRenderer() {
   scene.background = new THREE.Color(0x88ddff);
 
   const aspect = window.innerWidth / window.innerHeight;
-  const viewSize = 10;
+  const viewSize = 5;
 
   const camera = new THREE.OrthographicCamera(
     -viewSize * aspect,
@@ -18,7 +18,8 @@ export function createRenderer() {
     100
   );
 
-  camera.position.set(-10, 10, 10);
+  const camDist = 10;
+  camera.position.set(-camDist, camDist, camDist);
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer();
@@ -26,7 +27,7 @@ export function createRenderer() {
 
   document.body.appendChild(renderer.domElement);
 
-  const count = 144; //in future pull this from network based on allowed viewport size
+  const count = 17 * 17; //in future pull this from network based on allowed viewport size
 
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
@@ -34,9 +35,7 @@ export function createRenderer() {
   const geometry = new THREE.PlaneGeometry(1, 1);
   geometry.rotateX(-Math.PI / 2);
 
-  const material = new THREE.MeshBasicMaterial({
-    //vertexColors: true, // important for per-tile color
-  });
+  const material = new THREE.MeshBasicMaterial();
 
   const tileMesh = new THREE.InstancedMesh(geometry, material, count);
 
@@ -44,23 +43,27 @@ export function createRenderer() {
     new Float32Array(count * 3),
     3
   );
+  scene.add(tileMesh);
 
-  const test = new THREE.Mesh(
+  const player = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
     new THREE.MeshBasicMaterial({ color: 0xff0000 })
   );
-  scene.add(test);
-  scene.add(tileMesh);
+  scene.add(player);
+
   console.log(network.requestViewport(0, 0));
 
   return {
     render(state: any) {
-      const tiles: VisibleTile[] = network.requestViewport(0, 0);
+      player.position.set(state.x, 0, state.z);
+
+      //if (camera.position.x - player.position.x)
+
+      const tiles: VisibleTile[] = network.requestViewport(state.x, state.z);
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i];
 
         dummy.position.set(tile.x, 0, tile.z);
-        //dummy.position.set(i % 16, 0, Math.floor(i / 16));
         dummy.updateMatrix();
 
         tileMesh.setMatrixAt(i, dummy.matrix);
