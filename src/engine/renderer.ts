@@ -7,7 +7,7 @@ export function createRenderer() {
   scene.background = new THREE.Color(0x88ddff);
 
   const aspect = window.innerWidth / window.innerHeight;
-  const viewSize = 5;
+  const viewSize = 6;
 
   const camera = new THREE.OrthographicCamera(
     -viewSize * aspect,
@@ -18,8 +18,8 @@ export function createRenderer() {
     100
   );
 
-  const camDist = 10;
-  camera.position.set(-camDist, camDist, camDist);
+  const camOffset = new THREE.Vector3(-10, 10, 10);
+  camera.position.copy(camOffset);
   camera.lookAt(0, 0, 0);
 
   const renderer = new THREE.WebGLRenderer();
@@ -52,12 +52,14 @@ export function createRenderer() {
   scene.add(player);
 
   console.log(network.requestViewport(0, 0));
+  const camAlpha = 0.05;
 
   return {
     render(state: any) {
       player.position.set(state.x, 0, state.z);
 
-      //if (camera.position.x - player.position.x)
+      const camTarget = player.position.clone().add(camOffset);
+      camera.position.lerp(camTarget, camAlpha);
 
       const tiles: VisibleTile[] = network.requestViewport(state.x, state.z);
       for (let i = 0; i < tiles.length; i++) {

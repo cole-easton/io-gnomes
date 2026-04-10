@@ -17,9 +17,9 @@ export function startGame() {
     //     latestState = state;
     //   });
 
-    const maxSpeed = 0.01;
-    const deadZoneRadius = 0.08;
-    const fullThrottleRadius = 0.2;
+    const maxSpeed = 0.005;
+    const deadZoneRadius = 0.02;
+    const fullThrottleRadius = 0.18;
     let currentTime = performance.now();
     function loop() {
         const newTime = performance.now();
@@ -31,7 +31,7 @@ export function startGame() {
         if (amp2 < deadZoneRadius) {
             speed = 0;
         }
-        if (amp2 > deadZoneRadius && amp2 < fullThrottleRadius) {
+        else if (amp2 > deadZoneRadius && amp2 < fullThrottleRadius) {
             speed = maxSpeed*(amp2-deadZoneRadius)/(fullThrottleRadius-deadZoneRadius);
         }
         else {
