@@ -43,6 +43,7 @@ export function createRenderer() {
     new Float32Array(count * 3),
     3
   );
+  tileMesh.frustumCulled = false;
   scene.add(tileMesh);
 
   const player = new THREE.Mesh(
