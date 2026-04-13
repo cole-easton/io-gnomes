@@ -27,7 +27,8 @@ export function createRenderer() {
 
   document.body.appendChild(renderer.domElement);
 
-  const count = 17 * 17; //in future pull this from network based on allowed viewport size
+  const renderDist = 16; //in future pull this from network based on allowed viewport size
+  const count = (renderDist+1)**2; 
 
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
@@ -65,6 +66,15 @@ export function createRenderer() {
       const tiles: VisibleTile[] = network.requestViewport(state.x, state.z);
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i];
+
+        const dist = Math.max(Math.abs(tile.x-state.x), Math.abs(tile.z-state.z));
+        if (dist > renderDist/2) {
+          const scale = 1-2*(dist-renderDist/2);
+          dummy.scale.set(scale, scale, scale);
+        }
+        else {
+          dummy.scale.set(1, 1, 1);
+        }
 
         dummy.position.set(tile.x, 0, tile.z);
         dummy.updateMatrix();
