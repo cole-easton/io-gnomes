@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import type { VisibleTile } from "../map/types";
-import * as network from "../client/network";
 
 export function createRenderer() {
   const scene = new THREE.Scene();
@@ -53,7 +52,6 @@ export function createRenderer() {
   );
   scene.add(player);
 
-  console.log(network.requestViewport(0, 0));
   const camAlpha = 0.05;
 
   return {
@@ -63,7 +61,7 @@ export function createRenderer() {
       const camTarget = player.position.clone().add(camOffset);
       camera.position.lerp(camTarget, camAlpha);
 
-      const tiles: VisibleTile[] = network.requestViewport(state.x, state.z);
+      const tiles: VisibleTile[] = state.tiles;
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i];
 

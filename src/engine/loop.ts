@@ -1,4 +1,7 @@
 import { createRenderer } from "./renderer";
+import * as network from "../client/network";
+import type { VisibleTile } from "../map/types";
+
 //import { subscribe } from "../client/client";
 
 export function startGame() {
@@ -39,6 +42,9 @@ export function startGame() {
         }
         latestState.x += speed*dt*Math.cos(angle);
         latestState.z += speed*dt*Math.sin(angle);
+
+        const tiles: VisibleTile[] = network.requestViewport(latestState.x, latestState.z);
+        latestState.tiles = tiles;
 
         if (latestState) {
             renderer.render(latestState);
