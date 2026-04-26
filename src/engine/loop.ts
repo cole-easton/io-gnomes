@@ -1,4 +1,5 @@
 import { createRenderer } from "./renderer";
+import { GAME_CONFIG } from "../shared/config";
 import * as network from "../client/network";
 import type { VisibleTile } from "../map/types";
 
@@ -35,13 +36,13 @@ export function startGame() {
             speed = 0;
         }
         else if (amp2 > deadZoneRadius && amp2 < fullThrottleRadius) {
-            speed = maxSpeed*(amp2-deadZoneRadius)/(fullThrottleRadius-deadZoneRadius);
+            speed = maxSpeed * (amp2 - deadZoneRadius) / (fullThrottleRadius - deadZoneRadius);
         }
         else {
             speed = maxSpeed;
         }
-        latestState.x += speed*dt*Math.cos(angle);
-        latestState.z += speed*dt*Math.sin(angle);
+        latestState.x += speed * dt * Math.cos(angle);
+        latestState.z += speed * dt * Math.sin(angle);
 
         const tiles: VisibleTile[] = network.requestViewport(latestState.x, latestState.z);
         latestState.tiles = tiles;
@@ -49,7 +50,9 @@ export function startGame() {
         if (latestState) {
             renderer.render(latestState);
         }
-        requestAnimationFrame(loop);
+        if (!GAME_CONFIG.mapDebug) {
+            requestAnimationFrame(loop);
+        }
     }
 
     loop();

@@ -1,16 +1,28 @@
 export type Tile = {
-  r: number;
-  g: number;
-  b: number;
+  isWater: boolean;
+  salinity: number;
+  moisture: number;
+  temperature: number;
+  rockiness: number;
+  oil: number;
 };
+
+export type Color = {
+  r: number,
+  g: number,
+  b: number
+}
 
 export type VisibleTile = {
   x: number;
   z: number;
-  r: number;
-  g: number;
-  b: number;
+  appearance: {
+    color: Color;
+    //possibly add texture later
+  };
 };
+
+
 
 export type Map = {
   width: number;

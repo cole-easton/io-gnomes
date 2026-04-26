@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import type { VisibleTile } from "../map/types";
+import { GAME_CONFIG } from "../shared/config";
 
 export function createRenderer() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x88ddff);
 
   const aspect = window.innerWidth / window.innerHeight;
-  const viewSize = 6;
+  const viewSize = GAME_CONFIG.mapDebug?450:6;
 
   const camera = new THREE.OrthographicCamera(
     -viewSize * aspect,
@@ -14,10 +15,10 @@ export function createRenderer() {
     viewSize,
     -viewSize,
     0.1,
-    100
+    GAME_CONFIG.mapDebug?3000:100
   );
 
-  const camOffset = new THREE.Vector3(-10, 10, 10);
+  const camOffset = GAME_CONFIG.mapDebug?new THREE.Vector3(-1000, 1000, 1000):new THREE.Vector3(-10, 10, 10);
   camera.position.copy(camOffset);
   camera.lookAt(0, 0, 0);
 
@@ -26,7 +27,7 @@ export function createRenderer() {
 
   document.body.appendChild(renderer.domElement);
 
-  const renderDist = 16; //in future pull this from network based on allowed viewport size
+  const renderDist = GAME_CONFIG.mapDebug?1000:16; //in future pull this from network based on allowed viewport size
   const count = (renderDist+1)**2; 
 
   const dummy = new THREE.Object3D();
@@ -79,7 +80,8 @@ export function createRenderer() {
 
         tileMesh.setMatrixAt(i, dummy.matrix);
 
-        color.setRGB(tile.r, tile.g, tile.b);
+        const tileColor = tile.appearance.color;
+        color.setRGB(tileColor.r, tileColor.g, tileColor.b);
         tileMesh.setColorAt(i, color);
       }
       tileMesh.instanceMatrix.needsUpdate = true;
