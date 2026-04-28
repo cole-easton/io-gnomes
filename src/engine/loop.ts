@@ -1,14 +1,31 @@
 import { createRenderer } from "./renderer";
 import { GAME_CONFIG } from "../shared/config";
 import * as network from "../client/network";
-import type { VisibleTile } from "../map/types";
+import type { ViewportState } from "../map/types";
 
 //import { subscribe } from "../client/client";
+
+type ClientRenderState = {
+    x: number;
+    z: number;
+    viewport: ViewportState;
+};
 
 export function startGame() {
     const renderer = createRenderer();
 
-    let latestState: any = { x: 0, z: 0 };
+    let latestState: ClientRenderState = {
+        x: 0,
+        z: 0,
+        viewport: {
+            originX: 0,
+            originZ: 0,
+            width: 0,
+            height: 0,
+            tiles: [],
+            occupants: [],
+        },
+    };
     const mouse = { x: 0, y: 0 };
 
     window.addEventListener('mousemove', (event) => {
@@ -44,8 +61,7 @@ export function startGame() {
         latestState.x += speed * dt * Math.cos(angle);
         latestState.z += speed * dt * Math.sin(angle);
 
-        const tiles: VisibleTile[] = network.requestViewport(latestState.x, latestState.z);
-        latestState.tiles = tiles;
+        latestState.viewport = network.requestViewport(latestState.x, latestState.z);
 
         if (latestState) {
             renderer.render(latestState);

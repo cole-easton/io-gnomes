@@ -1,6 +1,14 @@
 import * as THREE from "three";
-import type { VisibleTile } from "../map/types";
+import type { ViewportState, VisibleTile } from "../map/types";
 import { GAME_CONFIG } from "../shared/config";
+import type { VisibleOccupant } from "../map/occupants";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+
+type ClientRenderState = {
+  x: number;
+  z: number;
+  viewport: ViewportState;
+};
 
 export function createRenderer() {
   const scene = new THREE.Scene();
@@ -27,6 +35,7 @@ export function createRenderer() {
 
   document.body.appendChild(renderer.domElement);
 
+  const shouldRenderOccupants = !GAME_CONFIG.mapDebug;
   const renderDist = GAME_CONFIG.mapDebug?1000:16; //in future pull this from network based on allowed viewport size
   const count = (renderDist+1)**2; 
 
@@ -40,12 +49,23 @@ export function createRenderer() {
 
   const tileMesh = new THREE.InstancedMesh(geometry, material, count);
 
-  tileMesh.instanceColor = new THREE.InstancedBufferAttribute(
+  const instanceColor = new THREE.InstancedBufferAttribute(
     new Float32Array(count * 3),
     3
   );
+  tileMesh.instanceColor = instanceColor;
   tileMesh.frustumCulled = false;
   scene.add(tileMesh);
+
+  const occupantsRoot = new THREE.Group();
+  scene.add(occupantsRoot);
+
+  const gltfLoader = new GLTFLoader();
+  const occupantTemplates = new Map<string, THREE.Object3D>();
+  const occupantTemplatePromises = new Map<string, Promise<THREE.Object3D>>();
+  const visibleOccupants = new Map<number, VisibleOccupant>();
+  const occupantObjects = new Map<number, THREE.Object3D>();
+  const pendingOccupantIds = new Set<number>();
 
   const player = new THREE.Mesh(
     new THREE.BoxGeometry(1, 1, 1),
@@ -55,14 +75,107 @@ export function createRenderer() {
 
   const camAlpha = 0.05;
 
+  function loadOccupantTemplate(meshPath: string): Promise<THREE.Object3D> {
+    const cachedTemplate = occupantTemplates.get(meshPath);
+    if (cachedTemplate) {
+      return Promise.resolve(cachedTemplate);
+    }
+
+    const pendingTemplate = occupantTemplatePromises.get(meshPath);
+    if (pendingTemplate) {
+      return pendingTemplate;
+    }
+
+    const templatePromise = new Promise<THREE.Object3D>((resolve, reject) => {
+      gltfLoader.load(
+        meshPath,
+        gltf => {
+          const template = gltf.scene;
+          template.traverse(object => {
+            object.frustumCulled = false;
+          });
+          occupantTemplates.set(meshPath, template);
+          occupantTemplatePromises.delete(meshPath);
+          resolve(template);
+        },
+        undefined,
+        error => {
+          occupantTemplatePromises.delete(meshPath);
+          reject(error);
+        },
+      );
+    });
+
+    occupantTemplatePromises.set(meshPath, templatePromise);
+    return templatePromise;
+  }
+
+  function updateOccupantTransform(object: THREE.Object3D, occupant: VisibleOccupant) {
+    object.position.set(occupant.anchorX, 0, occupant.anchorZ);
+  }
+
+  function removeHiddenOccupants(nextVisibleIds: Set<number>) {
+    for (const [occupantId, object] of occupantObjects) {
+      if (nextVisibleIds.has(occupantId)) {
+        continue;
+      }
+
+      occupantsRoot.remove(object);
+      occupantObjects.delete(occupantId);
+      visibleOccupants.delete(occupantId);
+    }
+  }
+
+  function syncVisibleOccupants(occupants: VisibleOccupant[]) {
+    const nextVisibleIds = new Set<number>();
+
+    for (const occupant of occupants) {
+      nextVisibleIds.add(occupant.id);
+      visibleOccupants.set(occupant.id, occupant);
+
+      const existingObject = occupantObjects.get(occupant.id);
+      if (existingObject) {
+        updateOccupantTransform(existingObject, occupant);
+        continue;
+      }
+      if (pendingOccupantIds.has(occupant.id)) {
+        continue;
+      }
+
+      pendingOccupantIds.add(occupant.id);
+      void loadOccupantTemplate(occupant.meshPath)
+        .then(template => {
+          pendingOccupantIds.delete(occupant.id);
+          const latestOccupant = visibleOccupants.get(occupant.id);
+          if (!latestOccupant || latestOccupant.meshPath !== occupant.meshPath) {
+            return;
+          }
+          if (occupantObjects.has(occupant.id)) {
+            return;
+          }
+
+          const occupantObject = template.clone(true);
+          updateOccupantTransform(occupantObject, latestOccupant);
+          occupantsRoot.add(occupantObject);
+          occupantObjects.set(occupant.id, occupantObject);
+        })
+        .catch(error => {
+          pendingOccupantIds.delete(occupant.id);
+          console.warn("Failed to load occupant asset", occupant.meshPath, error);
+        });
+    }
+
+    removeHiddenOccupants(nextVisibleIds);
+  }
+
   return {
-    render(state: any) {
+    render(state: ClientRenderState) {
       player.position.set(state.x, 0, state.z);
 
       const camTarget = player.position.clone().add(camOffset);
       camera.position.lerp(camTarget, camAlpha);
 
-      const tiles: VisibleTile[] = state.tiles;
+      const tiles: VisibleTile[] = state.viewport.tiles;
       for (let i = 0; i < tiles.length; i++) {
         const tile = tiles[i];
 
@@ -85,7 +198,11 @@ export function createRenderer() {
         tileMesh.setColorAt(i, color);
       }
       tileMesh.instanceMatrix.needsUpdate = true;
-      tileMesh.instanceColor.needsUpdate = true;
+      instanceColor.needsUpdate = true;
+
+      if (shouldRenderOccupants) {
+        syncVisibleOccupants(state.viewport.occupants);
+      }
 
       renderer.render(scene, camera);
     },

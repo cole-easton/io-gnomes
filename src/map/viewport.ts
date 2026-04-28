@@ -1,8 +1,16 @@
-import type { Map, Tile, VisibleTile, Color } from "./types";
+import { NO_OCCUPANT_ID, type OccupantId, type VisibleOccupant } from "./occupants";
+import type { Map, Tile, VisibleTile, Color, ViewportState } from "./types";
 
 function getTile(map: Map, x: number, z: number): Tile | undefined {
     if (x < -map.width / 2 || z < -map.height / 2 || x >= map.width / 2 || z >= map.height / 2) return undefined;
     return map.tiles[x + map.width / 2 + (z + map.height / 2) * map.width];
+}
+
+function getWorldPositionFromTileIndex(map: Map, tileIndex: number) {
+    return {
+        x: tileIndex % map.width - map.width / 2,
+        z: Math.floor(tileIndex / map.width) - map.height / 2,
+    };
 }
 
 export function getViewport(
@@ -11,11 +19,15 @@ export function getViewport(
     centerZ: number,
     width: number,
     height: number
-): VisibleTile[] {
+): ViewportState {
     const tiles: VisibleTile[] = [];
+    const occupants: VisibleOccupant[] = [];
+    const seenOccupantIds = new Set<OccupantId>();
 
     const halfW = Math.floor(width / 2);
     const halfH = Math.floor(height / 2);
+    const originX = Math.round(centerX) - halfW;
+    const originZ = Math.round(centerZ) - halfH;
 
     for (let dx = -halfW; dx <= halfW; dx++) {
         for (let dz = -halfH; dz <= halfH; dz++) {
@@ -51,12 +63,36 @@ export function getViewport(
             tiles.push({
                 x,
                 z,
+                occupantId: tile.occupantId,
                 appearance: {
                     color
                 }
             });
+
+            if (tile.occupantId !== NO_OCCUPANT_ID && !seenOccupantIds.has(tile.occupantId)) {
+                seenOccupantIds.add(tile.occupantId);
+                const occupant = map.occupantsById.get(tile.occupantId);
+                if (!occupant) {
+                    continue;
+                }
+                const anchorPosition = getWorldPositionFromTileIndex(map, occupant.anchorTile);
+                occupants.push({
+                    id: occupant.id,
+                    kind: occupant.kind,
+                    meshPath: occupant.meshPath,
+                    anchorX: anchorPosition.x,
+                    anchorZ: anchorPosition.z,
+                });
+            }
         }
     }
 
-    return tiles;
+    return {
+        originX,
+        originZ,
+        width: 2 * halfW + 1,
+        height: 2 * halfH + 1,
+        tiles,
+        occupants,
+    };
 }
