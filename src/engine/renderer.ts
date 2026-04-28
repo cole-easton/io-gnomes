@@ -11,6 +11,8 @@ type ClientRenderState = {
 };
 
 const TILE_COLOR_VARIATION = 0.035;
+const OCCUPANT_YAW_SEED = 0x45678;
+const OCCUPANT_SCALE_SEED = 0x56789;
 
 export function createRenderer() {
   const scene = new THREE.Scene();
@@ -99,6 +101,32 @@ export function createRenderer() {
     tileMesh.setColorAt(slot, color);
   }
 
+  function getOccupantBaseScale(meshPath: string): number {
+    if (meshPath === "/models/plants/palm.gltf") {
+      return 2;
+    }
+    else if (meshPath !== "/models/plants/cactus.gltf") {
+      return 1.6;
+    }
+
+    return 1;
+  }
+
+  function getOccupantScaleVariation(occupant: VisibleOccupant): number {
+    const u1 = randomFromTile(occupant.anchorX, occupant.anchorZ, OCCUPANT_SCALE_SEED);
+    const u2 = randomFromTile(occupant.anchorX, occupant.anchorZ, 0x31415);
+    const normal = Math.sqrt(-2*Math.log(u1))*Math.cos(2+Math.PI*u2);
+    return 1 + 0.07*normal;
+  }
+
+  function getOccupantYaw(occupant: VisibleOccupant): number {
+    if (occupant.kind !== "plant") {
+      return 0;
+    }
+
+    return randomFromTile(occupant.anchorX, occupant.anchorZ, OCCUPANT_YAW_SEED) * Math.PI * 2;
+  }
+
   function loadOccupantTemplate(meshPath: string): Promise<THREE.Object3D> {
     const cachedTemplate = occupantTemplates.get(meshPath);
     if (cachedTemplate) {
@@ -115,6 +143,8 @@ export function createRenderer() {
         meshPath,
         gltf => {
           const template = gltf.scene;
+          template.userData.baseScale = template.scale.clone();
+          template.userData.baseRotation = template.rotation.clone();
           template.traverse(object => {
             object.frustumCulled = false;
           });
@@ -136,6 +166,22 @@ export function createRenderer() {
 
   function updateOccupantTransform(object: THREE.Object3D, occupant: VisibleOccupant) {
     object.position.set(occupant.anchorX, 0, occupant.anchorZ);
+    const scale = getOccupantBaseScale(occupant.meshPath) * getOccupantScaleVariation(occupant);
+    const baseScale = object.userData.baseScale as THREE.Vector3 | undefined;
+    const baseRotation = object.userData.baseRotation as THREE.Euler | undefined;
+
+    object.rotation.set(
+      baseRotation?.x ?? 0,
+      (baseRotation?.y ?? 0) + getOccupantYaw(occupant),
+      baseRotation?.z ?? 0,
+      baseRotation?.order ?? "XYZ",
+    );
+
+    if (baseScale) {
+      object.scale.copy(baseScale).multiplyScalar(scale);
+    } else {
+      object.scale.setScalar(scale);
+    }
   }
 
   function removeHiddenOccupants(nextVisibleIds: Set<number>) {
@@ -179,6 +225,8 @@ export function createRenderer() {
           }
 
           const occupantObject = template.clone(true);
+          occupantObject.userData.baseScale = template.userData.baseScale;
+          occupantObject.userData.baseRotation = template.userData.baseRotation;
           updateOccupantTransform(occupantObject, latestOccupant);
           occupantsRoot.add(occupantObject);
           occupantObjects.set(occupant.id, occupantObject);
