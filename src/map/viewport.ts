@@ -24,15 +24,17 @@ export function getViewport(
     const occupants: VisibleOccupant[] = [];
     const seenOccupantIds = new Set<OccupantId>();
 
+    const roundedCenterX = Math.round(centerX);
+    const roundedCenterZ = Math.round(centerZ);
     const halfW = Math.floor(width / 2);
     const halfH = Math.floor(height / 2);
-    const originX = Math.round(centerX) - halfW;
-    const originZ = Math.round(centerZ) - halfH;
+    const originX = roundedCenterX - halfW;
+    const originZ = roundedCenterZ - halfH;
 
     for (let dx = -halfW; dx <= halfW; dx++) {
         for (let dz = -halfH; dz <= halfH; dz++) {
-            const x = Math.round(centerX) + dx;
-            const z = Math.round(centerZ) + dz;
+            const x = roundedCenterX + dx;
+            const z = roundedCenterZ + dz;
 
             const tile = getTile(map, x, z);
             if (!tile) continue;

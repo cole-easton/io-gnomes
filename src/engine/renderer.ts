@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { ViewportState, VisibleTile } from "../map/types";
+import type { Color as TileColor, ViewportState, VisibleTile } from "../map/types";
 import { GAME_CONFIG } from "../shared/config";
 import type { VisibleOccupant } from "../map/occupants";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -9,6 +9,8 @@ type ClientRenderState = {
   z: number;
   viewport: ViewportState;
 };
+
+const TILE_COLOR_VARIATION = 0.035;
 
 export function createRenderer() {
   const scene = new THREE.Scene();
@@ -74,6 +76,28 @@ export function createRenderer() {
   scene.add(player);
 
   const camAlpha = 0.05;
+
+  function clamp01(value: number): number {
+    return Math.max(0, Math.min(1, value));
+  }
+
+  function randomFromTile(x: number, z: number, seed: number): number {
+    let hash = Math.imul(x | 0, 374761393);
+    hash ^= Math.imul(z | 0, 668265263);
+    hash ^= seed;
+    hash = (hash ^ (hash >>> 13)) >>> 0;
+    hash = Math.imul(hash, 1274126177) >>> 0;
+    return hash / 0xffffffff;
+  }
+
+  function updateTileColor(slot: number, tileColor: TileColor, x: number, z: number) {
+    color.setRGB(
+      clamp01(tileColor.r + (randomFromTile(x, z, 0x12345) * 2 - 1) * TILE_COLOR_VARIATION),
+      clamp01(tileColor.g + (randomFromTile(x, z, 0x23456) * 2 - 1) * TILE_COLOR_VARIATION),
+      clamp01(tileColor.b + (randomFromTile(x, z, 0x34567) * 2 - 1) * TILE_COLOR_VARIATION),
+    );
+    tileMesh.setColorAt(slot, color);
+  }
 
   function loadOccupantTemplate(meshPath: string): Promise<THREE.Object3D> {
     const cachedTemplate = occupantTemplates.get(meshPath);
@@ -176,15 +200,22 @@ export function createRenderer() {
       camera.position.lerp(camTarget, camAlpha);
 
       const tiles: VisibleTile[] = state.viewport.tiles;
-      for (let i = 0; i < tiles.length; i++) {
+      for (let i = 0; i < count; i++) {
         const tile = tiles[i];
 
-        const dist = Math.max(Math.abs(tile.x-state.x), Math.abs(tile.z-state.z));
-        if (dist > renderDist/2) {
-          const scale = 1-2*(dist-renderDist/2);
-          dummy.scale.set(scale, scale, scale);
+        if (!tile) {
+          dummy.position.set(0, 0, 0);
+          dummy.scale.set(0, 0, 0);
+          dummy.updateMatrix();
+          tileMesh.setMatrixAt(i, dummy.matrix);
+          continue;
         }
-        else {
+
+        const dist = Math.max(Math.abs(tile.x - state.x), Math.abs(tile.z - state.z));
+        if (dist > renderDist / 2) {
+          const scale = Math.max(0, 1 - 2 * (dist - renderDist / 2));
+          dummy.scale.set(scale, scale, scale);
+        } else {
           dummy.scale.set(1, 1, 1);
         }
 
@@ -192,11 +223,9 @@ export function createRenderer() {
         dummy.updateMatrix();
 
         tileMesh.setMatrixAt(i, dummy.matrix);
-
-        const tileColor = tile.appearance.color;
-        color.setRGB(tileColor.r, tileColor.g, tileColor.b);
-        tileMesh.setColorAt(i, color);
+        updateTileColor(i, tile.appearance.color, tile.x, tile.z);
       }
+
       tileMesh.instanceMatrix.needsUpdate = true;
       instanceColor.needsUpdate = true;
 
