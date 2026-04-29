@@ -10,7 +10,7 @@ type ClientRenderState = {
   viewport: ViewportState;
 };
 
-const TILE_COLOR_VARIATION = 0.035;
+const TILE_COLOR_VARIATION = GAME_CONFIG.mapDebug?0:0.035;
 const OCCUPANT_YAW_SEED = 0x45678;
 const OCCUPANT_SCALE_SEED = 0x56789;
 

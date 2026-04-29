@@ -42,6 +42,9 @@ export function getViewport(
             if (tile.isWater) {
                 color = { r: 0, g: tile.salinity, b: 1 };
             }
+            else if (tile.rockiness > 0.95) {
+                color = { r: 0.7, g: 0.7, b: 0.7 }
+            }
             else if (tile.salinity > 0) { //beach
                 color = { r: 0.95, g: 0.87, b: 0.47 };
             }

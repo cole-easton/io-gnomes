@@ -5,7 +5,7 @@ import { NO_OCCUPANT_ID, type Occupant } from './occupants';
 import { PLANT_TYPES, type PlantInstance, type PlantType, type PlantWeight, type TileOffset } from './plants';
 
 const rng = Math.random;
-const PLANT_PLACEMENT_ATTEMPTS = 12**5;
+const PLANT_PLACEMENT_ATTEMPTS = 12 ** 5;
 
 type WeightedPlantChoice = {
     plantType: PlantType;
@@ -92,7 +92,7 @@ export function getMap(size: number): Map {
             tiles.push({
                 isWater: waterMap(0.002 * x, 0.002 * z) + waterMap2(k * x + 0.3, k * z + 0.3) < 0,
                 salinity: 0,
-                moisture: (moistureMap(k * x, k * z) + 1) * 0.45,
+                moisture: (moistureMap(0.001 * x, 0.001 * z) + 1) * 0.45,
                 temperature: 0.8 * (1 - Math.abs(x - z) / size) + 0.2 * (tempMap(k * x, k * z) + 1) / 2,
                 rockiness: (rockinessMap(k * x, k * z) + 1) / 2,
                 oil: (oilMap(k * x, k * z) + 1) / 2,
@@ -197,7 +197,7 @@ export function getMap(size: number): Map {
                     if (!xi && !yi) {
                         continue;
                     }
-                    const ii = idx(x+xi, y+yi);
+                    const ii = idx(x + xi, y + yi);
                     const w = Math.exp(-s * xi ** 2);
                     weights += w;
                     if (tiles[ii].isWater) {
@@ -207,7 +207,7 @@ export function getMap(size: number): Map {
                 }
             }
             tiles[i].salinity = salinitySum / weights;
-            const newMoisture = moistureSum/weights;
+            const newMoisture = moistureSum / weights;
             if (newMoisture > tiles[i].moisture) {
                 tiles[i].moisture = newMoisture;
             }
