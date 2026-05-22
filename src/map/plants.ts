@@ -1,5 +1,6 @@
 import type { Tile } from "./types";
 import type { Occupant, OccupantId } from "./occupants";
+import type { ResourceStack } from "../resources/types";
 
 export type TileIndex = number;
 export type PlantTypeId = string;
@@ -17,6 +18,10 @@ export type PlantType = {
   id: PlantTypeId;
   mesh: MeshReference | null;
   footprint: TileOffset[];
+  harvest: {
+    resources: ResourceStack[];
+    removesPlant: boolean;
+  };
   getTileWeight: (tile: Tile) => PlantWeight;
 };
 
@@ -43,30 +48,50 @@ export const PLANT_TYPES: PlantType[] = [
     id: "null",
     mesh: null,
     footprint: [],
+    harvest: {
+      resources: [],
+      removesPlant: false,
+    },
     getTileWeight: () => 1,
   },
   {
     id: "pine",
     mesh: "/models/plants/pine.gltf",
     footprint: THREE_BY_THREE_FOOTPRINT,
+    harvest: {
+      resources: [{ resourceId: "wood", quantity: 4, traits: { species: "pine" } }],
+      removesPlant: true,
+    },
     getTileWeight: tile => tile.salinity<0.15?Math.sqrt(tile.moisture*Math.exp(-5*Math.log(6*tile.temperature)**2)):0,
   },
   {
     id: "deciduous",
     mesh: "/models/plants/deciduous.gltf",
     footprint: THREE_BY_THREE_FOOTPRINT,
+    harvest: {
+      resources: [{ resourceId: "wood", quantity: 5, traits: { species: "deciduous" } }],
+      removesPlant: true,
+    },
     getTileWeight: tile => tile.salinity===0&&tile.moisture>0.35&&tile.moisture<0.67?Math.exp(-60*(tile.temperature-0.5)**2)/0.32:0,
   },
   {
     id: "palm",
     mesh: "/models/plants/palm.gltf",
     footprint: THREE_BY_THREE_FOOTPRINT,
+    harvest: {
+      resources: [{ resourceId: "wood", quantity: 3, traits: { species: "palm" } }],
+      removesPlant: true,
+    },
     getTileWeight: tile => tile.temperature>0.5?3*tile.temperature-1.5:0,
   },
   {
     id: "cactus",
     mesh: "/models/plants/cactus.gltf",
     footprint: THREE_BY_THREE_FOOTPRINT,
+    harvest: {
+      resources: [],
+      removesPlant: false,
+    },
     getTileWeight: tile => tile.salinity < 0.1?Math.max((tile.temperature-tile.moisture-0.2)/0.7,0):0,
   },
 ];

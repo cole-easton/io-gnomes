@@ -13,6 +13,7 @@ type ClientRenderState = {
 const TILE_COLOR_VARIATION = GAME_CONFIG.mapDebug?0:0.035;
 const OCCUPANT_YAW_SEED = 0x45678;
 const OCCUPANT_SCALE_SEED = 0x56789;
+const OCCUPANT_HIT_AREA_NAME = "occupant-hit-area";
 
 export function createRenderer() {
   const scene = new THREE.Scene();
@@ -31,11 +32,14 @@ export function createRenderer() {
   );
 
   const camOffset = GAME_CONFIG.mapDebug?new THREE.Vector3(-1000, 1000, 1000):new THREE.Vector3(-10, 10, 10);
-  camera.position.copy(camOffset);
-  camera.lookAt(0, 0, 0);
+  const cameraLookOffset = GAME_CONFIG.mapDebug?new THREE.Vector3(0, 0, 0):new THREE.Vector3(-1, 0, 1);
+  const trackedLookTarget = cameraLookOffset.clone();
+  camera.position.copy(trackedLookTarget).add(camOffset);
+  camera.lookAt(trackedLookTarget);
 
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.domElement.style.display = "block";
 
   document.body.appendChild(renderer.domElement);
 
@@ -63,6 +67,15 @@ export function createRenderer() {
 
   const occupantsRoot = new THREE.Group();
   scene.add(occupantsRoot);
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  const occupantHitAreaGeometry = new THREE.BoxGeometry(2.8, 4, 2.8);
+  const occupantHitAreaMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    opacity: 0,
+    transparent: true,
+    depthWrite: false,
+  });
 
   const gltfLoader = new GLTFLoader();
   const occupantTemplates = new Map<string, THREE.Object3D>();
@@ -184,6 +197,37 @@ export function createRenderer() {
     }
   }
 
+  function setObjectOccupantId(object: THREE.Object3D, occupantId: number) {
+    object.userData.occupantId = occupantId;
+    object.traverse(child => {
+      child.userData.occupantId = occupantId;
+    });
+  }
+
+  function getOccupantIdFromObject(object: THREE.Object3D): number | null {
+    let current: THREE.Object3D | null = object;
+    while (current) {
+      const occupantId = current.userData.occupantId;
+      if (typeof occupantId === "number") {
+        return occupantId;
+      }
+      current = current.parent;
+    }
+
+    return null;
+  }
+
+  function addOccupantHitArea(object: THREE.Object3D) {
+    if (object.getObjectByName(OCCUPANT_HIT_AREA_NAME)) {
+      return;
+    }
+
+    const hitArea = new THREE.Mesh(occupantHitAreaGeometry, occupantHitAreaMaterial);
+    hitArea.name = OCCUPANT_HIT_AREA_NAME;
+    hitArea.position.y = 2;
+    object.add(hitArea);
+  }
+
   function removeHiddenOccupants(nextVisibleIds: Set<number>) {
     for (const [occupantId, object] of occupantObjects) {
       if (nextVisibleIds.has(occupantId)) {
@@ -227,6 +271,8 @@ export function createRenderer() {
           const occupantObject = template.clone(true);
           occupantObject.userData.baseScale = template.userData.baseScale;
           occupantObject.userData.baseRotation = template.userData.baseRotation;
+          addOccupantHitArea(occupantObject);
+          setObjectOccupantId(occupantObject, occupant.id);
           updateOccupantTransform(occupantObject, latestOccupant);
           occupantsRoot.add(occupantObject);
           occupantObjects.set(occupant.id, occupantObject);
@@ -241,11 +287,36 @@ export function createRenderer() {
   }
 
   return {
+    getOccupantIdsAtClientPoint(clientX: number, clientY: number): number[] {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+
+      const intersections = raycaster.intersectObjects([...occupantObjects.values()], true);
+      const occupantIds: number[] = [];
+      const seenOccupantIds = new Set<number>();
+
+      for (const intersection of intersections) {
+        const occupantId = getOccupantIdFromObject(intersection.object);
+        if (occupantId === null || seenOccupantIds.has(occupantId)) {
+          continue;
+        }
+
+        occupantIds.push(occupantId);
+        seenOccupantIds.add(occupantId);
+      }
+
+      return occupantIds;
+    },
+
     render(state: ClientRenderState) {
       player.position.set(state.x, 0, state.z);
 
-      const camTarget = player.position.clone().add(camOffset);
-      camera.position.lerp(camTarget, camAlpha);
+      const desiredLookTarget = player.position.clone().add(cameraLookOffset);
+      trackedLookTarget.lerp(desiredLookTarget, camAlpha);
+      camera.position.copy(trackedLookTarget).add(camOffset);
+      camera.lookAt(trackedLookTarget);
 
       const tiles: VisibleTile[] = state.viewport.tiles;
       for (let i = 0; i < count; i++) {
