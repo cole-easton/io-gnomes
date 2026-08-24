@@ -81,3 +81,9 @@ For example:
 - Keep future backend replacement in mind when naming APIs and choosing where state lives.
 - If a feature has a "real server later" implication, shape the mock API like a server API now.
 - Avoid broad refactors unless needed for the requested gameplay change.
+
+## Documentation Notes
+
+- Treat the README as employer-facing project documentation.
+- Keep README language professional, concise, and focused on what the project demonstrates technically.
+- Avoid personal process notes, provisional naming caveats, or diary-style commentary in the README unless explicitly requested.
