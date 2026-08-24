@@ -115,10 +115,10 @@ export function createRenderer() {
   }
 
   function getOccupantBaseScale(meshPath: string): number {
-    if (meshPath === "/models/plants/palm.gltf") {
+    if (meshPath.endsWith("palm.gltf")) {
       return 2;
     }
-    else if (meshPath !== "/models/plants/cactus.gltf") {
+    else if (!meshPath.endsWith("cactus.gltf")) {
       return 1.6;
     }
 

@@ -87,3 +87,9 @@ For example:
 - Treat the README as employer-facing project documentation.
 - Keep README language professional, concise, and focused on what the project demonstrates technically.
 - Avoid personal process notes, provisional naming caveats, or diary-style commentary in the README unless explicitly requested.
+
+## Deployment Notes
+
+- The Vite build is currently intended to be portable so the contents of `dist/` can be hosted from an arbitrary subfolder.
+- Keep public asset paths compatible with `import.meta.env.BASE_URL` rather than hardcoding root-relative paths like `/models/...`.
+- `base: "./"` is appropriate while this is a static demo without client-side routing. If the project later has a canonical hosted path or deep routes, switch `base` to that explicit path and rebuild.

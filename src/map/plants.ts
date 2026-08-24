@@ -43,6 +43,10 @@ export const THREE_BY_THREE_FOOTPRINT: TileOffset[] = [
   { dx: 1, dz: 1 },
 ];
 
+function getPublicAssetPath(path: string): string {
+  return `${import.meta.env.BASE_URL}${path}`;
+}
+
 export const PLANT_TYPES: PlantType[] = [
   {
     id: "null",
@@ -56,7 +60,7 @@ export const PLANT_TYPES: PlantType[] = [
   },
   {
     id: "pine",
-    mesh: "/models/plants/pine.gltf",
+    mesh: getPublicAssetPath("models/plants/pine.gltf"),
     footprint: THREE_BY_THREE_FOOTPRINT,
     harvest: {
       resources: [{ resourceId: "wood", quantity: 4, traits: { species: "pine" } }],
@@ -66,7 +70,7 @@ export const PLANT_TYPES: PlantType[] = [
   },
   {
     id: "deciduous",
-    mesh: "/models/plants/deciduous.gltf",
+    mesh: getPublicAssetPath("models/plants/deciduous.gltf"),
     footprint: THREE_BY_THREE_FOOTPRINT,
     harvest: {
       resources: [{ resourceId: "wood", quantity: 5, traits: { species: "deciduous" } }],
@@ -76,7 +80,7 @@ export const PLANT_TYPES: PlantType[] = [
   },
   {
     id: "palm",
-    mesh: "/models/plants/palm.gltf",
+    mesh: getPublicAssetPath("models/plants/palm.gltf"),
     footprint: THREE_BY_THREE_FOOTPRINT,
     harvest: {
       resources: [{ resourceId: "wood", quantity: 3, traits: { species: "palm" } }],
@@ -86,7 +90,7 @@ export const PLANT_TYPES: PlantType[] = [
   },
   {
     id: "cactus",
-    mesh: "/models/plants/cactus.gltf",
+    mesh: getPublicAssetPath("models/plants/cactus.gltf"),
     footprint: THREE_BY_THREE_FOOTPRINT,
     harvest: {
       resources: [],
