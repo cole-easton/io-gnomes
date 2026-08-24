@@ -2,6 +2,12 @@
 
 A browser-based multiplayer game prototype exploring an `io`-style world with procedural terrain, resource gathering, and an architecture shaped for an eventual authoritative server.
 
+## Demo
+
+A hosted demo is available at [coleeaston.net/multiplayerWorldPrototype](https://coleeaston.net/multiplayerWorldPrototype/).
+
+The prototype currently generates the full procedural map in the browser on startup, so the initial load may take up to about a minute before the world appears. In the intended multiplayer architecture, world generation would run server-side and the shared world state would be streamed to connected players.
+
 ## Current State
 
 This is an early playable prototype built with Vite, TypeScript, and Three.js. The current client renders a procedural world, lets the local player move through it, loads plant models into the visible viewport, and supports harvesting plants into a stack-based inventory.
